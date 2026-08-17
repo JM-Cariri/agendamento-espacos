@@ -17,21 +17,44 @@
   the iteration process.
 -->
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: Node.js (backend) + React (frontend) per Constitution Principle II  
+**Primary Dependencies**: Express or equivalent (backend), React + hooks (frontend)  
+**Storage**: PostgreSQL (relational database per Constitution Principle II)  
+**Testing**: Jest, Supertest, or equivalent integration frameworks  
+**Target Platform**: Local development environment (production deployment is out of scope)  
+**Project Type**: Web service (React SPA frontend + Node.js API backend)  
+**Performance Goals**: Support 90-minute development sessions per Constitution Principle III  
+**Constraints**: NO responsive design beyond basic mobile viewport, NO file uploads, NO external integrations  
+**Scale/Scope**: Must deliver minimum mandatory scope per Constitution Principle I
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+✅ **Fixed Technology Stack** (Principle II):  
+- Frontend: React (not Vue, Angular, Svelte, or other)  
+- Backend: Node.js (not Python, Go, Java, or other)  
+- Database: PostgreSQL (not MongoDB, MySQL, SQLite, or other)
+
+✅ **Scope Alignment** (Principle I):  
+- [ ] Requires 2-profile authentication with role-based permissions  
+- [ ] Defines 3 main related entities  
+- [ ] Includes complete CRUD for central entity  
+- [ ] Includes search/filter listing screen  
+- [ ] Includes 2–3 business indicator dashboard  
+- [ ] Lists all 6 business rules to be implemented and validated
+
+✅ **Feature Compliance** (Principle V):  
+- [ ] No password recovery, email confirmation, or additional profiles  
+- [ ] No email/WhatsApp/push notifications  
+- [ ] No file/image uploads  
+- [ ] No payment integration  
+- [ ] No mobile app, PWA, or responsive design requirements  
+- [ ] No PDF/Excel export, audit logging, or LGPD compliance  
+- [ ] No external system integration
+
+✅ **Priority Sequence** (Principle IV):  
+- Plan sequences implementation in order: Auth → Entities → CRUD → Search/Filter → Dashboard → Business Rules
 
 ## Project Structure
 

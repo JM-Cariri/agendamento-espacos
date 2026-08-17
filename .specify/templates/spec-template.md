@@ -5,6 +5,18 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+## Scope Compliance Check *(mandatory)*
+
+Before proceeding, verify this specification aligns with Constitution Principles I, II, and IV:
+
+- ✅ Scope is part of the mandatory minimum (auth, entities, CRUD, search, dashboard, business rules)?
+- ✅ Technology stack uses ONLY React (frontend) + Node.js (backend) + PostgreSQL (database)?
+- ✅ NO forbidden features (no password recovery, email, files, payments, PWA, LGPD, external integrations, etc.)?
+- ✅ User stories follow Core Feature Priority Sequence: Auth → Entities → CRUD → Search → Dashboard → Rules?
+- ✅ Each user story is independently testable and deliverable?
+
+If any item is unclear or not in scope, stop and clarify with stakeholders BEFORE continuing.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--

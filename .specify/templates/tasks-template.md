@@ -12,18 +12,33 @@ description: "Task list template for feature implementation"
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
-## Format: `[ID] [P?] [Story] Description`
+## Format: `[ID] [S] [P?] [Story] Description`
 
+- **[S]**: Session count (1S = fits in one 90-min session, 2S = spans two sessions, etc.)
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- **CRITICAL**: Every task MUST fit within its session count; if not, decompose further
 
 ## Path Conventions
 
-- **Single project**: `src/`, `tests/` at repository root
-- **Web app**: `backend/src/`, `frontend/src/`
-- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
-- Paths shown below assume single project - adjust based on plan.md structure
+- **Web app (Agendamento de Espaços)**: `backend/src/`, `backend/tests/`, `frontend/src/`, `frontend/tests/`
+- Technology stack (FIXED per Constitution): React (frontend) + Node.js/Express (backend) + PostgreSQL
+- Paths shown below assume web app structure - adjust based on plan.md structure
+
+## Session Sizing Principle (Constitution Principle III)
+
+Every task MUST be sized to complete within a single 90-minute developer session including:
+- Implementation time
+- Local testing and debugging
+- Code review preparation
+
+If a task cannot fit in 90 minutes:
+1. It is TOO LARGE
+2. Decompose it into smaller, independent subtasks
+3. Each subtask must have its own ID and session estimate
+
+Tasks that span sessions are NOT PERMITTED per Constitution Principle III.
 
 <!-- 
   ============================================================================
