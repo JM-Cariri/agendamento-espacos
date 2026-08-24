@@ -14,6 +14,15 @@
 - ✅ User stories follow Core Feature Priority Sequence: Auth → Entities → CRUD → Search → Dashboard → Rules
 - ✅ Each user story is independently testable and deliverable
 
+## Clarifications
+
+### Session 2026-08-24
+- Q: Qual deve ser o ciclo de vida de status de reserva? → A: Pendente, Aprovada, Recusada e Cancelada; `Pendente -> Aprovada|Recusada`; `Pendente/Aprovada -> Cancelada` quando permitido pela regra de negócio; `Aprovada` com data/hora já passada é histórica e não recebe um novo status; reservas canceladas ou recusadas permanecem no banco para histórico, com exclusão lógica apenas quando aplicável; `Ativa/upcoming` é uma condição derivada, não um status.
+- Q: Qual deve ser o limite diário de reservas por usuário? → A: Sem limite diário; apenas respeitar disponibilidade.
+- Q: Quem pode cancelar uma reserva após a aprovação? → A: Dono até véspera; após, coordenador.
+- Q: Quem aprova ou recusa reservas pendentes? → A: Coordenador aprova ou recusa reservas pendentes.
+- Q: Quem pode visualizar reservas? → A: Ambos veem todas as reservas.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -236,12 +245,14 @@ Both admin and user need to see a dashboard with 2-3 key business indicators:
 - **FR-001**: System MUST authenticate users with email/username and password, supporting exactly 2 user profiles (admin and regular user)
 - **FR-002**: System MUST enforce role-based access control, showing admin-specific features only to admins and user-specific features only to regular users
 - **FR-003**: System MUST maintain Space entities with attributes: name, capacity, description, building location, operating hours, and creation timestamp
-- **FR-004**: System MUST maintain Booking entities with attributes: user ID, space ID, booking date, start time, end time, purpose, status, and creation/update timestamps
+- **FR-004**: System MUST maintain Booking entities with attributes: user ID, space ID, booking date, start time, end time, purpose, status, optional logical-deletion fields (for historical records), and creation/update timestamps; status MUST be restricted to the fixed set: Pendente, Aprovada, Recusada, Cancelada
 - **FR-005**: System MUST maintain User entities with attributes: ID, username/email, password (hashed), profile type (admin/user), name, and contact info
 - **FR-006**: Admin MUST be able to create, read, update, and delete spaces through a dedicated management interface
-- **FR-007**: Admin MUST be able to view all bookings across all users and spaces with filtering by space, user, and date range
+- **FR-019**: System MUST treat `Ativa`/`upcoming` as a derived condition based on date/time (e.g., booking Aprovada whose date/time has not yet passed), and not as a separate persisted status
+- **FR-020**: System MUST preserve cancelled or rejected bookings as historical records in the database, using logical deletion only when needed and never deleting them physically from the main booking history
+- **FR-007**: Admin and regular users MUST both be able to view all bookings across all users and spaces with filtering by space, user, and date range; however, only the booking owner or the coordinator can update or cancel eligible reservations according to the business rules
 - **FR-008**: Regular user MUST be able to create bookings by selecting a space, date, and available time slot
-- **FR-009**: Regular user MUST be able to view, update, and delete their own bookings (not other users' bookings)
+- **FR-009**: Regular user MUST be able to view, update, and delete their own bookings (not other users' bookings) when the cancellation window and status rules permit it; other users may still view the entire booking list for transparency, but cannot modify others' records
 - **FR-010**: Regular user MUST be able to search and filter spaces by name and capacity
 - **FR-011**: System MUST display a listing of available spaces with search/filter capability on the user interface
 - **FR-012**: System MUST display a dashboard with 2-3 key business indicators (metrics) for both admin and user roles
@@ -322,7 +333,9 @@ Both admin and user need to see a dashboard with 2-3 key business indicators:
 
 5. **BR-005 - Operating Hours Compliance**: The system MUST enforce that all bookings start and end within the space's defined operating hours. A booking from 8 AM to 8:30 PM for a space operating 7 AM - 7 PM MUST be rejected.
 
-6. **BR-006 - Booking Limit Per User**: The system MUST prevent individual users from creating more than [TBD: e.g., 3] active bookings on the same day. This is to ensure fair access and prevent monopolization of spaces.
+6. **BR-006 - Booking Limit Per User**: The system MUST NOT impose a fixed daily booking limit per user. The system MUST only enforce space availability and time-slot conflicts. Fairness is managed by the availability constraints, not by a daily cap.
+
+7. **BR-007 - Booking Lifecycle & Historical Retention**: The system MUST use the fixed status set `Pendente`, `Aprovada`, `Recusada`, and `Cancelada`. Transitions are limited to `Pendente -> Aprovada | Recusada` and `Pendente/Aprovada -> Cancelada` when cancellation is allowed by business rules. Only the coordinator may approve or reject pending bookings. The owner may cancel a booking until the day before the reservation date; after that, only the coordinator may cancel it. `Aprovada` reservations that have already passed in time are historical records and do not require an additional `Concluída` status. Cancelled or rejected reservations MUST remain stored for history and must not be physically deleted; if logical deletion is used, it must only apply as a soft-delete mechanism for relevant views or retention rules.
 
 ---
 
