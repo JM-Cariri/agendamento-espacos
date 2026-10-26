@@ -6,7 +6,7 @@ description: "Task list for the space scheduling MVP — revised session order"
 **Input**: documentos em `/specs/001-space-scheduling/`
 **Pré-requisitos**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/space-booking-api.md`
 **Branch**: `001-space-scheduling`
-**Estado**: planejamento revisado; nenhuma tarefa de código foi marcada como concluída.
+**Estado**: planejamento revisado; T001 concluída após validação local; as demais tarefas permanecem pendentes.
 ## Organização e regras
 
 - **8 sessões de referência, com teto de 90 minutos por sessão.** Cada sessão agrupa duas subtarefas pequenas, com estimativas-alvo que somam 90 minutos. As estimativas são metas, não garantia; se uma sessão exceder o tempo, registrar o desvio em vez de omitir testes.
@@ -38,7 +38,7 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: disponibilizar login real para os dois perfis, usando PostgreSQL, antes de começar as telas administrativas.
 
-- [ ] **T001 [S1] (~45min)** Preparar a estrutura mínima `backend/` (Express, dependências, scripts e `.env.example`), conexão em `backend/src/config/database.js`, tabela `Usuario` com email obrigatório (login/contato) e telefone opcional, tabela de suporte `Sessoes` com FK para `Usuario`, migração inicial em `db/migrations/001_usuarios.sql` e seed local com dois usuários em `db/seeds/001_usuarios.js`. Armazenar somente **hashes** de senha. Referências: FR-001, FR-005; `data-model.md`.
+- [x] **T001 [S1] (~45min)** Preparar a estrutura mínima `backend/` (Express, dependências, scripts e `.env.example`), conexão em `backend/src/config/database.js`, tabela `Usuario` com email obrigatório (login/contato) e telefone opcional, tabela de suporte `Sessoes` com FK para `Usuario`, migração inicial em `db/migrations/001_usuarios.sql` e seed local com dois usuários em `db/seeds/001_usuarios.js`. Armazenar somente **hashes** de senha. Referências: FR-001, FR-005; `data-model.md`.
 - [ ] **T013 [S1] (~45min)** Implementar `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` e middleware de JWT/perfil em `backend/src/controllers/authController.js`, `backend/src/routes/authRoutes.js`, `backend/src/middleware/authMiddleware.js` e `backend/src/app.js`. O JWT assinado em cookie HttpOnly identifica uma sessão em `Sessoes`; validar assinatura, usuário, existência, revogação e expiração em cada requisição autenticada; renovar JWT e `expires_at` para 30 minutos após atividade; no logout gravar `revoked_at` antes de limpar o cookie. Validar `Origin` configurada em toda operação de escrita, usar SameSite=Lax e configurar Secure/HTTPS em produção. Segredo e origem permitida vêm do ambiente. Testar revogação imediata após logout, expiração de 30 minutos com relógio de teste controlável, 401/403 e origem não confiável. Referências: FR-001, FR-002, BR-003.
 
 **Critérios independentes de validação**: banco reconhece exatamente os perfis Professor e Coordenador; senha inválida retorna 401; login válido define cookie HttpOnly sem expor token no corpo; endpoint protegido sem sessão ou após 30 minutos sem atividade retorna 401; logout revoga a linha de `Sessoes` e o token é imediatamente rejeitado; rota exclusiva de Coordenador acessada por Professor retorna 403; origem ausente/não confiável em escrita retorna 403. Testar com cliente HTTP compatível com cookies antes do React.
