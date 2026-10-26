@@ -12,12 +12,12 @@ This feature delivers a compact room scheduling system for a school environment 
 ## Technical Context
 
 **Language/Version**: Node.js 20 LTS (backend) + React 18 (frontend)  
-**Primary Dependencies**: Express, PostgreSQL driver, JWT or session middleware, React Router, Axios, Vite  
-**Storage**: PostgreSQL 15+  
+**Primary Dependencies**: Express, PostgreSQL driver, JWT middleware using an HttpOnly cookie, React Router, Axios, Vite
+**Storage**: PostgreSQL 17
 **Testing**: Jest + Supertest for backend API tests; React Testing Library for UI smoke tests  
 **Target Platform**: Local development environment on Linux/macOS/Windows via Node + PostgreSQL  
 **Project Type**: Web application (React SPA + Node.js REST API)  
-**Performance Goals**: MVP must support the academic 8-session delivery window; no heavy optimization required  
+**Performance Goals**: Meet SC-001–SC-005 in a local acceptance run; use approximately 1000 seeded spaces for SC-004 and approximately 1000 seeded reservations for SC-005; no heavy optimization required
 **Constraints**: 90-minute task sizing, fixed stack only, no PWA/mobile/responsive design beyond basic layout, no email/file/payment integrations  
 **Scale/Scope**: Up to roughly 100 users and 1000 bookings; low-friction academic project scope
 
@@ -112,30 +112,36 @@ db/
 
 ## Research
 
-This project follows the pattern described in the feature spec and constitution; the unknowns were narrowed to the domain model and lifecycle rules. The decisions below are therefore fixed before implementation:
+This project follows the pattern described in the feature spec and constitution; the domain, session, and lifecycle rules below are fixed before implementation:
 
 - Booking status set is restricted to Pendente, Aprovada, Recusada, Cancelada.
-- Active/upcoming is a derived condition: an approved booking whose time has not passed yet.
-- Overlap validation uses only reservations with status Aprovada in the same space.
-- Rejected or cancelled bookings remain in the database for history; soft-delete is optional but not mandatory for record retention.
-- Coordinador is the role that approves or rejects pending reservations; both roles can view all reservations, while only owner or coordinator can take edit/cancel actions within the policy window.
+- `Aprovada futura` is a derived condition: an approved booking whose start date/time has not passed yet; `reservas futuras` additionally includes pending bookings.
+- Overlap validation blocks conflicting reservations with status Pendente or Aprovada in the same space; Recusada and Cancelada do not block availability.
+- Rejected or cancelled bookings remain in the database for history; reservations are never physically deleted.
+- Spaces are logically archived using `archived_at`, never physically deleted; archival is rejected while future Pendente/Aprovada reservations exist.
+- Authentication uses a PostgreSQL `Sessoes` record per signed JWT; logout revokes the row, and idle activity renews both the record and JWT.
+- State-changing requests validate the configured Origin; cookies use SameSite=Lax, and production requires HTTPS and Secure.
+- Cancellation is canonical only through `PATCH /reservas/:id/status`; DELETE is not used for reservations.
+- Coordenador is the role that approves or rejects pending reservations; both roles can view all reservations, while only the owner or Coordinator can take edit/cancel actions within the policy window. Cancellation is canonical through `PATCH /reservas/:id/status`.
+- `reservas futuras` includes not-yet-started Pendente/Aprovada; `Aprovada futura` is the distinct approved-only derived condition.
 
 ## Phase 0: Research and Planning Decisions
 
 ### Research Findings
 
-1. **Authentication model**: Simple login with two profiles (Professor and Coordenador), no password recovery, no email confirmation.
-2. **Reservation lifecycle**: Pendente is the initial state; approval is manual by Coordenador; rejection is explicit and required when rejected; cancellation is allowed by rule and must keep records.
-3. **Scheduling model**: Fixed 50-minute blocks between 07:00 and 22:00, with overlap checks only on approved reservations.
-4. **Entity design**: `Usuario`, `Espaco`, `Reserva` form the core domain. Reservation joins both other entities.
+1. **Authentication model**: Simple login with two profiles (Professor and Coordenador), signed JWT only in an HttpOnly cookie, PostgreSQL `Sessoes` row linked to Usuario, sliding expiry after 30 minutes of inactivity with renewed JWT, immediate server-side revocation on logout, Origin validation for state-changing requests, SameSite=Lax, and HTTPS/Secure in production. Protected API routes validate session state and permissions independently of frontend route guards.
+2. **Reservation lifecycle**: Pendente is the initial state; approval is manual by Coordenador; rejection is explicit and required when rejected; cancellation uses only `PATCH /reservas/:id/status`, is checked by the backend at initial implementation, and keeps records. Owner may cancel eligible records before reservation date; on that date, only Coordinator may cancel before start. Repeated/late cancellation is rejected.
+3. **Scheduling model**: Consecutive 50-minute slots aligned from 07:00 through 22:00 for every space; same-day requests are accepted only when the slot start remains in the future. Pendente and Aprovada reservations block overlapping slots.
+4. **Entity design**: `Usuario`, `Espaco`, `Reserva` form the core domain; `Sessoes` is an authentication-support table. Usuario email is required for login/contact and phone is optional. Espaco includes required building location, operating-hours fields (07:00 and 22:00), and `archived_at`; its row and reservation FKs are retained.
 5. **Scope fit**: MVP can be implemented within 8 sessions by splitting the domain and UI into four slices: auth, management, reservations, dashboard.
 
 ### Design Decisions
 
-- Use a relational design with explicit enums for role and reservation status.
+- Use a relational design with explicit enums for role and reservation status and restrictive FKs preserving history.
 - Keep a `justificativa_recusa` column that is required whenever status = Recusada.
 - Use server-side validation for business rules to avoid client-only trust.
-- Use a small dashboard that shows counts and occupancy without introducing unsupported report/export features.
+- Exclude archived spaces from booking choices; reject archival with a clear reason when future pending/approved reservations exist.
+- Use a role-specific dashboard: Professor sees own future (not-started Pendente/Aprovada), pending, and approved booking counts; Coordenador sees total non-archived spaces and system-wide pending and approved counts. `Aprovada futura` remains a distinct approved-only derived condition.
 - Keep the UI functional and minimal, with basic navigation and no elaborate responsiveness.
 
 ## Phase 1: Design and Contracts
@@ -160,14 +166,14 @@ The design still complies with the constitution: fixed stack, in-scope functiona
 
 ## Phase 2: Task Planning Outcome
 
-The implementation will be organized into 4 main slices with confirmed 90-minute boundaries:
+The implementation follows the constitution's priority sequence across the eight sessions, each totaling 90 minutes:
 
-1. Authentication and role-based routing
-2. Space management CRUD and filters
-3. Reservation lifecycle, approval, and conflict validation
-4. Dashboard and final polish
+1. S1–S2: Authentication, role-based routing, and relational model
+2. S3–S4: Space management followed by reservation CRUD
+3. S5–S6: Search/filter followed by role-specific dashboards
+4. S7–S8: Business-rule consolidation, error feedback, and regression
 
-Each slice is decomposed into smaller tasks so each task fits a single 90-minute session.
+The detailed session sequence and preserved task IDs are in [tasks.md](./tasks.md).
 
 ## Generated Artifacts
 
@@ -175,4 +181,4 @@ Each slice is decomposed into smaller tasks so each task fits a single 90-minute
 - [data-model.md](./data-model.md)
 - [quickstart.md](./quickstart.md)
 - [contracts/space-booking-api.md](./contracts/space-booking-api.md)
-- [tasks.md](./tasks.md) will be generated in the next task-generation step
+- [tasks.md](./tasks.md) contains the eight sessions and 16 preserved task IDs for implementation

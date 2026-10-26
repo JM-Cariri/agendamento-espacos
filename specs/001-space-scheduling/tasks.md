@@ -17,7 +17,7 @@ description: "Task list for the space scheduling MVP — revised session order"
 - **Stack obrigatório**: frontend React + Vite, backend Node.js + Express, banco PostgreSQL. O ambiente e a entrega são locais; não adicionar recursos fora do escopo.
 - **Perfis únicos**: `Professor` e `Coordenador`. Autenticação e autorização de API vêm antes do uso das telas protegidas.
 - **Estados únicos de reserva**: `Pendente`, `Aprovada`, `Recusada`, `Cancelada`. Cancelamento preserva o registro. Os dois perfis podem consultar todas as reservas, mas apenas usuários autorizados podem modificá-las.
-- O banco local `agendamento_espacos` e o usuário `agendamento_app` já foram configurados e testados. **Não** criar novamente o banco nem inserir senhas reais no Git.
+- O banco PostgreSQL 17 local `agendamento_espacos` e o usuário `agendamento_app` já foram configurados e testados. **Não** recriar o banco nem versionar senhas ou credenciais reais.
 
 ## Dependências e sequência
 
@@ -38,10 +38,10 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: disponibilizar login real para os dois perfis, usando PostgreSQL, antes de começar as telas administrativas.
 
-- [ ] **T001 [S1] (~45min)** Preparar a estrutura mínima `backend/` (Express, dependências, scripts e `.env.example`), conexão em `backend/src/config/database.js`, tabela `Usuario` e migração inicial em `db/migrations/001_usuarios.sql`, além de seed local com dois usuários de demonstração em `db/seeds/001_usuarios.js`. Armazenar somente **hashes** de senha. Referências: FR-001, FR-005; `data-model.md`.
-- [ ] **T013 [S1] (~45min)** Implementar `POST /api/auth/login`, `GET /api/auth/me` e middleware de JWT/perfil em `backend/src/controllers/authController.js`, `backend/src/routes/authRoutes.js`, `backend/src/middleware/authMiddleware.js` e `backend/src/app.js`. Configurar segredo via ambiente, nunca no código. Referências: FR-001, FR-002, BR-003.
+- [ ] **T001 [S1] (~45min)** Preparar a estrutura mínima `backend/` (Express, dependências, scripts e `.env.example`), conexão em `backend/src/config/database.js`, tabela `Usuario` com email obrigatório (login/contato) e telefone opcional, tabela de suporte `Sessoes` com FK para `Usuario`, migração inicial em `db/migrations/001_usuarios.sql` e seed local com dois usuários em `db/seeds/001_usuarios.js`. Armazenar somente **hashes** de senha. Referências: FR-001, FR-005; `data-model.md`.
+- [ ] **T013 [S1] (~45min)** Implementar `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` e middleware de JWT/perfil em `backend/src/controllers/authController.js`, `backend/src/routes/authRoutes.js`, `backend/src/middleware/authMiddleware.js` e `backend/src/app.js`. O JWT assinado em cookie HttpOnly identifica uma sessão em `Sessoes`; validar assinatura, usuário, existência, revogação e expiração em cada requisição autenticada; renovar JWT e `expires_at` para 30 minutos após atividade; no logout gravar `revoked_at` antes de limpar o cookie. Validar `Origin` configurada em toda operação de escrita, usar SameSite=Lax e configurar Secure/HTTPS em produção. Segredo e origem permitida vêm do ambiente. Testar revogação imediata após logout, expiração de 30 minutos com relógio de teste controlável, 401/403 e origem não confiável. Referências: FR-001, FR-002, BR-003.
 
-**Critérios independentes de validação**: banco reconhece exatamente os perfis Professor e Coordenador; senha inválida retorna 401; login válido retorna token; endpoint protegido sem token retorna 401; rota de Coordenador acessada por Professor retorna 403. Testar com `curl`/cliente HTTP antes do React.
+**Critérios independentes de validação**: banco reconhece exatamente os perfis Professor e Coordenador; senha inválida retorna 401; login válido define cookie HttpOnly sem expor token no corpo; endpoint protegido sem sessão ou após 30 minutos sem atividade retorna 401; logout revoga a linha de `Sessoes` e o token é imediatamente rejeitado; rota exclusiva de Coordenador acessada por Professor retorna 403; origem ausente/não confiável em escrita retorna 403. Testar com cliente HTTP compatível com cookies antes do React.
 
 **Checkpoint**: autenticação e controle básico de acesso funcionais na API.
 
@@ -51,10 +51,10 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: concluir as três entidades e demonstrar login, sessão e navegação separada por perfil.
 
-- [ ] **T002 [S2] (~40min)** Acrescentar `Espaco` e `Reserva`, chaves estrangeiras, estados e índices na migração `db/migrations/002_espacos_reservas.sql`; criar seed de espaços em `db/seeds/002_espacos.js`. Não duplicar a tabela `Usuario` criada na S1. Revisar campos com `spec.md` e `data-model.md` antes da migração. Referências: FR-003, FR-004, FR-005, FR-019, FR-020.
-- [ ] **T014 [S2] (~50min)** Inicializar `frontend/` com React + Vite e implementar login, logout local, persistência de sessão no recarregamento, proteção de rotas e menus por perfil em `frontend/src/pages/LoginPage.jsx`, `frontend/src/routes/AppRoutes.jsx`, `frontend/src/api/client.js` e `frontend/src/App.jsx`. A API continua sendo responsável pela autorização real. Referências: FR-001, FR-002, BR-003.
+- [ ] **T002 [S2] (~40min)** Acrescentar `Espaco` e `Reserva`, chaves estrangeiras restritivas, estados e índices na migração `db/migrations/002_espacos_reservas.sql`; criar seed de espaços em `db/seeds/002_espacos.js`. `Espaco` inclui localização obrigatória, horários fixos 07:00–22:00 e `archived_at` nullable; reserva referencia espaço sem permitir exclusão física. Não duplicar tabelas `Usuario`/`Sessoes` da S1. Referências: FR-003, FR-004, FR-005, FR-019, FR-020.
+- [ ] **T014 [S2] (~50min)** Inicializar `frontend/` com React + Vite e implementar login, logout pela API, restauração de sessão no recarregamento usando o cookie HttpOnly, envio de credenciais/cookies e Origin esperado, proteção de rotas e menus por perfil em `frontend/src/pages/LoginPage.jsx`, `frontend/src/routes/AppRoutes.jsx`, `frontend/src/api/client.js` e `frontend/src/App.jsx`. Não armazenar nem expor JWT no frontend; a API é responsável pela autorização real. Medir o fluxo login→dashboard para SC-001. Referências: FR-001, FR-002, BR-003, SC-001.
 
-**Critérios independentes de validação**: três entidades relacionadas no banco; Professor e Coordenador fazem login; navegação mantém sessão no refresh; logout remove credenciais locais; acesso indevido recebe 403 da API e não revela tela administrativa.
+**Critérios independentes de validação**: três entidades core relacionadas e tabela de suporte de sessão no banco; Professor e Coordenador fazem login; navegação mantém sessão no refresh por cookie; logout chama a API, revoga a linha no banco e limpa o cookie; acesso indevido recebe 403 da API e não revela tela administrativa.
 
 **Checkpoint**: autenticação demonstrável na interface e modelo relacional pronto.
 
@@ -64,10 +64,10 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: Coordenador administra espaços; Professor consulta, sem permissão de alteração.
 
-- [ ] **T003 [S3] (~45min)** Implementar listagem, detalhe, criação, edição e exclusão controlada de espaços em `backend/src/controllers/spaceController.js` e `backend/src/routes/spaceRoutes.js`; validar nome, capacidade e campos definidos na especificação; impedir exclusão que quebraria histórico de reservas. Referências: FR-003, FR-006, BR-003, BR-004.
-- [ ] **T004 [S3] (~45min)** Implementar `frontend/src/pages/SpacesPage.jsx` e `frontend/src/components/SpaceForm.jsx` com listagem, cadastro, edição, exclusão quando permitida e mensagens de validação. Referências: FR-006, FR-011.
+- [ ] **T003 [S3] (~45min)** Implementar listagem, detalhe, criação, edição e arquivamento lógico via `PATCH /api/spaces/:id/archive` em `backend/src/controllers/spaceController.js` e `backend/src/routes/spaceRoutes.js`; validar nome, capacidade, localização obrigatória e horários; excluir fisicamente fica proibido. Rejeitar arquivamento com mensagem explicativa se existirem reservas futuras Pendente/Aprovada e garantir FK histórica. Testar arquivamento bloqueado/permitido. Referências: FR-003, FR-006, BR-003, BR-004.
+- [ ] **T004 [S3] (~45min)** Implementar `frontend/src/pages/SpacesPage.jsx` e `frontend/src/components/SpaceForm.jsx` com listagem, cadastro, edição e ação de arquivar (sem DELETE), localização, horários 07:00–22:00 e erros acionáveis; medir o tempo de cadastro até aparecer na tela de reservas para SC-002. Referências: FR-006, FR-011, SC-002, SC-012.
 
-**Critérios independentes de validação**: Coordenador realiza CRUD de espaços com persistência; Professor pode consultar e recebe 403 ao tentar modificar; exclusão de espaço relacionado a reservas não apaga o histórico.
+**Critérios independentes de validação**: Coordenador cria/edita/consulta e arquiva espaços; Professor consulta e recebe 403 ao tentar modificar; arquivamento bloqueado por reservas futuras Pendente/Aprovada explica o motivo; arquivamento permitido preserva espaço e FKs históricas e impede novas reservas.
 
 **Checkpoint**: gerenciamento de espaços disponível para o fluxo de reservas.
 
@@ -77,12 +77,12 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: Professor solicita, consulta, altera e cancela suas reservas elegíveis; ambos podem consultar todas.
 
-- [ ] **T005 [S4] (~50min)** Implementar `POST /api/reservas`, `GET /api/reservas`, `GET /api/reservas/:id`, `PUT /api/reservas/:id` e `DELETE /api/reservas/:id` **como cancelamento por status**, em `backend/src/controllers/reservationController.js`, `backend/src/routes/reservationRoutes.js` e `backend/src/validators/reservationValidator.js`. O dono vem da autenticação, e não de `usuario_id` enviado pelo cliente. Inserir validações mínimas de data futura, existência de espaço, horário, titularidade e conflito com reservas aprovadas. Referências: FR-004, FR-007, FR-008, FR-009, FR-013–FR-017, BR-001–BR-005.
-- [ ] **T006 [S4] (~40min)** Criar `frontend/src/pages/ReservationsPage.jsx` e `frontend/src/components/ReservationForm.jsx` para solicitar reserva, listar, consultar detalhe, editar quando permitido e cancelar preservando histórico; exibir estado `Pendente` após criação. Referências: FR-007, FR-008, FR-009, FR-020.
+- [ ] **T005 [S4] (~50min)** Implementar `POST /api/reservas`, `GET /api/reservas`, `GET /api/reservas/:id`, `PUT /api/reservas/:id` e `PATCH /api/reservas/:id/status` em `backend/src/controllers/reservationController.js`, `backend/src/routes/reservationRoutes.js` e `backend/src/validators/reservationValidator.js`; não criar rota DELETE de reserva. O dono vem da sessão e o estado inicial é definido no servidor como `Pendente`. Validar sessão/autorização, origem em escrita, início futuro, espaço existente e não arquivado, slot fixo, titularidade, conflito atômico entre Pendente/Aprovada e política de cancelamento desde a primeira implementação. Cancelar somente se elegível: titular antes da data; no dia, Coordenador apenas antes do início; bloquear status Recusada/Cancelada e reserva já iniciada. Adicionar teste de criação válida, conflito e cancelamento pelo titular antes da data; testes concorrentes e dos outros limites de cancelamento ficam em T008. Confirmar que o mesmo Professor pode criar duas reservas não sobrepostas na data para SC-013. Referências: FR-004, FR-007–FR-009, FR-013–FR-018, BR-001–BR-006, SC-013.
+- [ ] **T006 [S4] (~40min)** Criar `frontend/src/pages/ReservationsPage.jsx` e `frontend/src/components/ReservationForm.jsx` para solicitar reserva, listar, consultar detalhe, editar campos permitidos sem alterar estado/titular, e cancelar via `PATCH /api/reservas/:id/status` preservando histórico; exibir estado `Pendente` após criação e erros de conflito/cancelamento com instruções acionáveis. Referências: FR-007, FR-008, FR-009, FR-020, SC-012.
 
-**Critérios independentes de validação**: criação persiste como Pendente; reservas são consultáveis; usuários não modificam reservas alheias; cancelamento não apaga linhas; entradas inválidas retornam erros claros.
+**Critérios independentes de validação**: criação persiste como Pendente; reservas são consultáveis; usuários não modificam reservas alheias; apenas PATCH de status cancela; titular antes da data pode cancelar; titular no dia recebe 403; Coordenador no dia, antes do início, pode cancelar; reserva Recusada/Cancelada ou iniciada não pode ser cancelada; espaço arquivado não recebe reserva; cinco tentativas concorrentes produzem uma criação e quatro conflitos; mensagens explicam como corrigir a entrada.
 
-**Checkpoint**: CRUD de reserva funcional, com exclusão lógica por cancelamento.
+**Checkpoint**: CRUD de reserva funcional; cancelamento apenas por transição de status, sem exclusão física.
 
 ---
 
@@ -90,8 +90,8 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: permitir consultar reservas e localizar espaços com filtros claros.
 
-- [ ] **T009 [S5] (~40min)** Adicionar parâmetros de pesquisa/filtro nas rotas e controladores de reservas e espaços em `backend/src/routes/reservationRoutes.js`, `backend/src/controllers/reservationController.js`, `backend/src/routes/spaceRoutes.js` e `backend/src/controllers/spaceController.js`: espaço, usuário, data e status; nome/capacidade dos espaços. Referências: FR-007, FR-010, FR-011.
-- [ ] **T010 [S5] (~50min)** Implementar listagem com filtros e consulta de horários disponíveis em `frontend/src/components/ReservationList.jsx`, `frontend/src/components/SpaceFilter.jsx` e páginas correspondentes. A indicação visual de disponibilidade não substitui a validação do backend. Referências: FR-007, FR-010, FR-011.
+- [ ] **T009 [S5] (~40min)** Adicionar parâmetros de pesquisa/filtro nas rotas e controladores de reservas e espaços em `backend/src/routes/reservationRoutes.js`, `backend/src/controllers/reservationController.js`, `backend/src/routes/spaceRoutes.js` e `backend/src/controllers/spaceController.js`: reservas por espaço, usuário, data, status e período; espaços por `nome` (substring case-insensitive) e `capacidadeMinima` (inteiro > 0); espaços arquivados ficam fora da busca normal. Validar período como `futuras` (Pendente/Aprovada não iniciadas) ou `aprovadasFuturas` (somente Aprovada não iniciadas). Testar correspondência de nome/capacidade e filtros inválidos, que retornam 400 com mensagem acionável. Referências: FR-007, FR-010, FR-011, FR-019, SC-012.
+- [ ] **T010 [S5] (~50min)** Implementar listagem com filtros e consulta de horários disponíveis em `frontend/src/components/ReservationList.jsx`, `frontend/src/components/SpaceFilter.jsx` e páginas correspondentes; distinguir visualmente reservas futuras Pendente/Aprovada de futuras exclusivamente Aprovadas. A indicação visual de disponibilidade não substitui a validação do backend. Medir busca por nome até resultados visíveis para SC-004 com cerca de 1000 espaços-semente. Referências: FR-007, FR-010, FR-011, FR-019, SC-004.
 
 **Critérios independentes de validação**: ambos os perfis visualizam todas as reservas; filtros retornam resultados correspondentes; busca de espaço por nome/capacidade funciona; ações indevidas continuam bloqueadas na API.
 
@@ -103,10 +103,10 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: mostrar 2–3 indicadores reais para Professor e Coordenador.
 
-- [ ] **T011 [S6] (~45min)** Implementar `GET /api/dashboard/metrics` em `backend/src/controllers/dashboardController.js` e `backend/src/routes/dashboardRoutes.js`, calculando 3 indicadores reais: total de espaços, reservas pendentes e reservas aprovadas. Referência: FR-012.
-- [ ] **T012 [S6] (~45min)** Renderizar os indicadores em `frontend/src/pages/DashboardPage.jsx` e `frontend/src/components/MetricCard.jsx`, com estados de carregamento/erro simples e acesso pelos dois perfis. Referência: FR-012.
+- [ ] **T011 [S6] (~45min)** Implementar `GET /api/dashboard/metrics` em `backend/src/controllers/dashboardController.js` e `backend/src/routes/dashboardRoutes.js`, retornando conforme o perfil: Professor—reservas próprias futuras (Pendente ou Aprovada não iniciadas), pendentes e aprovadas; Coordenador—total de espaços não arquivados, reservas pendentes e aprovadas no sistema. `Aprovada futura` é condição derivada distinta e aprovada-only; contagens por status incluem histórico. Medir SC-005 com cerca de 1000 reservas-semente. Referências: FR-012, FR-019, SC-005.
+- [ ] **T012 [S6] (~45min)** Renderizar os indicadores específicos do perfil em `frontend/src/pages/DashboardPage.jsx` e `frontend/src/components/MetricCard.jsx`, com estados de carregamento/erro simples e acesso pelos dois perfis. Medir os indicadores até ficarem visíveis para SC-005 com cerca de 1000 reservas-semente. Referências: FR-012, SC-005.
 
-**Critérios independentes de validação**: valores mudam conforme o banco; dashboard não usa números fixos; ambos os perfis conseguem visualizá-lo.
+**Critérios independentes de validação**: valores mudam conforme o banco; dashboard não usa números fixos; Professor vê apenas suas contagens pessoais e Coordenador vê as contagens gerais definidas.
 
 **Checkpoint**: painel funcional com três métricas verificáveis.
 
@@ -116,10 +116,10 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: completar o ciclo da reserva e comprovar as seis regras exigidas pela constituição.
 
-- [ ] **T007 [S7] (~50min)** Implementar/aprimorar `backend/src/services/reservationService.js` e endpoint `PATCH /api/reservas/:id/status` para aprovar, recusar com justificativa e cancelar dentro da janela autorizada; validar transições, manter histórico, impedir conflito de aprovações concorrentes e derivar reservas futuras sem criar status `Concluida`. Referências: FR-019, FR-020, BR-001, BR-003 e BR-006.
-- [ ] **T008 [S7] (~40min)** Consolidar validadores de status e horário em `backend/src/validators/reservationStatusValidator.js`, `backend/src/validators/reservationValidator.js` e `backend/src/middleware/errorHandler.js`; adicionar testes backend para **BR-001** conflito, **BR-002** data futura, **BR-003** permissões, **BR-004** espaço existente, **BR-005** horários, **BR-006** ciclo e histórico. Referências: FR-013–FR-017, BR-001–BR-006.
+- [ ] **T007 [S7] (~50min)** Implementar/aprimorar `backend/src/services/reservationService.js` e `PATCH /api/reservas/:id/status` para aprovar e recusar com justificativa; manter histórico, garantir que aprovação não crie sobreposição com reserva Pendente/Aprovada mesmo sob concorrência e testar esse recheck concorrente; derivar as condições futura/Aprovada futura sem criar status `Concluida`. Cancelamento usa a mesma rota canônica e regras já exigidas desde T005. Executar fluxo Professor solicita → Coordenador aprova/recusa e medir SC-003. Referências: FR-019, FR-020, BR-001, BR-003, BR-006, SC-003.
+- [ ] **T008 [S7] (~40min)** Consolidar validadores de status e horário em `backend/src/validators/reservationStatusValidator.js`, `backend/src/validators/reservationValidator.js` e `backend/src/middleware/errorHandler.js`; adicionar testes backend para **BR-001** conflito concorrente (cinco tentativas simultâneas para o mesmo slot resultam em uma criação e quatro 409), **BR-002** data futura, **BR-003** permissões, **BR-004** espaço existente/arquivado, **BR-005** horários, **BR-006** ciclo/histórico e os limites restantes de cancelamento: titular no dia (403) e Coordenador no dia antes do início (sucesso). Testar também repetição/estado inválido e mensagens acionáveis. Referências: FR-013–FR-017, BR-001–BR-006, SC-010, SC-012.
 
-**Critérios independentes de validação**: Coordenador aprova/recusa reservas pendentes; recusa sem justificativa é rejeitada; Professor não aprova; apenas titulares ou Coordenador cancelam nas condições aprovadas; datas, horários e conflitos são bloqueados; canceladas e recusadas permanecem no banco.
+**Critérios independentes de validação**: Coordenador aprova/recusa reservas pendentes; recusa sem justificativa é rejeitada; Professor não aprova; titular antes da data e Coordenador no dia antes do início podem cancelar; titular no dia, estados repetidos/inválidos e reservas iniciadas são bloqueados; datas, horários e conflitos são bloqueados; as cinco tentativas concorrentes produzem exatamente uma reserva; canceladas e recusadas permanecem no banco; erros informam como corrigir.
 
 **Checkpoint**: seis regras com testes e fluxo completo de aprovação/cancelamento.
 
@@ -129,8 +129,8 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 **Objetivo**: apresentar um fluxo completo confiável, sem incluir novas funcionalidades.
 
-- [ ] **T015 [S8] (~40min)** Ajustar navegação, feedback de ações, estados de carregamento, erros e formulários em `frontend/src/components/` e `frontend/src/pages/`. Sem PWA, notificações ou outras extensões fora do escopo.
-- [ ] **T016 [S8] (~50min)** Executar testes de regressão em `backend/tests/` e, quando aplicável, `frontend/tests/`: login/logout, 401/403, CRUD de espaços, reserva, filtros, dashboard e seis regras; conferir tentativa simultânea de aprovação conflitante; registrar execução e instruções locais no `quickstart.md` se necessário.
+- [ ] **T015 [S8] (~40min)** Ajustar navegação, feedback de ações, estados de carregamento, erros e formulários em `frontend/src/components/` e `frontend/src/pages/`; verificar que mensagens de conflito, arquivamento e cancelamento sejam claras e acionáveis (SC-012). Sem PWA, notificações ou outras extensões fora do escopo.
+- [ ] **T016 [S8] (~50min)** Executar a suíte de regressão já implementada em `backend/tests/` e, quando aplicável, `frontend/tests/`: sessões/CSRF, 401/403, arquivamento, reservas, filtros, dashboards e seis regras; confirmar execução do teste concorrente (cinco solicitações, uma criação/quatro 409), concorrência de aprovação e múltiplas reservas não sobrepostas no mesmo dia. Os testes e medições SC-001–SC-005 são criados/executados nas tarefas correspondentes (SC-001 T014; SC-002 T004; SC-003 T007; SC-004 T010; SC-005 T012); T016 confere o resultado integrado, não concentra a criação ou aferição individual dos testes. Registrar regressão e atualizar o `quickstart.md` se necessário.
 
 **Critérios independentes de validação**: fluxo Professor solicita → Coordenador aprova/recusa → todos consultam → titular ou Coordenador cancela quando autorizado; histórico preservado; nenhuma rota protegida acessível sem autenticação.
 
@@ -138,11 +138,13 @@ description: "Task list for the space scheduling MVP — revised session order"
 
 ---
 
-## Pendências documentais antes de executar a S4
+## Regras documentais consolidadas
 
-- **Duração de reserva**: o `data-model.md` original exige blocos fixos de **50 minutos (07:00–22:00)**, enquanto as *Assumptions* do `spec.md` original indicam duração flexível. **Não presumir uma das duas regras**: conferir a especificação atualmente aprovada e alinhar `data-model.md`, contrato e validadores antes da T005.
-- **Campos de Espaço**: a especificação cita localização e horário de funcionamento, ausentes do quadro de atributos de `Espaco` na versão original do `data-model.md`. Conferir e alinhar antes da T002.
-- **Documentos disponíveis**: a cópia ZIP analisada é anterior às correções de FR-018, BR-003 e BR-006 feitas no computador. **Manter as versões corrigidas locais de `spec.md` e do checklist**; esta revisão altera somente `tasks.md`.
+- Duração, janela diária e disponibilidade estão definidos em `spec.md`, `data-model.md`, `research.md` e no contrato da API: slots alinhados de 50 minutos, das 07:00 às 22:00; `Pendente` e `Aprovada` bloqueiam conflitos.
+- `Espaco` inclui localização obrigatória e atributos de horário 07:00–22:00.
+- Sessões usam cookie HttpOnly com expiração após 30 minutos sem atividade, logout invalidante e autorização no servidor.
+- Testes de sessão, arquivamento, cancelamento, concorrência, erros acionáveis, desempenho e ausência de limite diário estão distribuídos nas tarefas correspondentes; T016 executa a regressão integrada.
+- Indicadores pessoais do Professor e gerais do Coordenador estão separados em T011/T012.
 
 ## Final Validation Checklist
 
