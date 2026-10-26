@@ -52,7 +52,8 @@
 6. 18 functional requirements covering all user story flows
 
 **Notes for Planning Phase**:
-1. BR-006 daily booking limit and operating hours format are reasonable defaults; verify with instructor if theme-specific
+
+1. Daily booking limits are resolved in FR-018: no fixed daily limit applies. BR-006 now defines booking lifecycle and historical retention. Operating hours remain fixed daily for V1, as documented in the specification.
 2. Session sizing will be validated during task generation to ensure each task fits 90 minutes
 3. Business rules validation should be tested at database layer (backend constraint enforcement)
 4. Dashboard metrics should be calculated server-side for accuracy

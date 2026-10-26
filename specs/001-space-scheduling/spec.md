@@ -252,16 +252,18 @@ Both admin and user need to see a dashboard with 2-3 key business indicators:
 - **FR-020**: System MUST preserve cancelled or rejected bookings as historical records in the database, using logical deletion only when needed and never deleting them physically from the main booking history
 - **FR-007**: Admin and regular users MUST both be able to view all bookings across all users and spaces with filtering by space, user, and date range; however, only the booking owner or the coordinator can update or cancel eligible reservations according to the business rules
 - **FR-008**: Regular user MUST be able to create bookings by selecting a space, date, and available time slot
-- **FR-009**: Regular user MUST be able to view, update, and delete their own bookings (not other users' bookings) when the cancellation window and status rules permit it; other users may still view the entire booking list for transparency, but cannot modify others' records
+- **FR-009**: Regular users MUST be able to view all bookings and update or cancel only their own eligible bookings, subject to the cancellation window and booking status rules. Cancellation MUST change the booking status to `Cancelada` without physically deleting the record.
 - **FR-010**: Regular user MUST be able to search and filter spaces by name and capacity
 - **FR-011**: System MUST display a listing of available spaces with search/filter capability on the user interface
 - **FR-012**: System MUST display a dashboard with 2-3 key business indicators (metrics) for both admin and user roles
 - **FR-013**: System MUST enforce that no two bookings can occupy the same space at the same time (business rule: no double booking)
 - **FR-014**: System MUST enforce that bookings can only be created for future dates/times (business rule: no past bookings)
-- **FR-015**: System MUST enforce that users can only create/modify/delete their own bookings unless they are an admin (business rule: permission-based access)
+- **FR-015**: System MUST enforce that regular users can only create bookings for themselves and update or cancel their own eligible bookings. Coordinators MAY manage other users' bookings according to their administrative permissions and the booking lifecycle rules.
 - **FR-016**: System MUST validate that a space exists before allowing a booking to be created for it (business rule: space validation)
 - **FR-017**: System MUST enforce that booking times fall within the space's operating hours (business rule: operating hours check)
-- **FR-018**: System MUST limit individual users to a maximum of [TBD] bookings per day or prevent excessive bookings (business rule: booking limits)
+
+- **FR-018**: System MUST NOT impose a fixed daily booking limit per user. Bookings are subject to space availability and scheduling conflict validation.
+
 
 ### Key Entities
 
@@ -307,8 +309,8 @@ Both admin and user need to see a dashboard with 2-3 key business indicators:
 - **Booking Constraints**: 
   - Booking duration is flexible (can book any length within operating hours)
   - No recurring/recurring bookings (single bookings only)
-  - Maximum booking duration per day per user will be defined in business rules (currently TBD)
-  - Cancellation allowed up to booking time (no restriction)
+  - No fixed daily limit on the number of bookings per user; each booking must respect space availability, operating hours, and scheduling conflict rules.
+  - Cancellation policy: The booking owner MAY cancel a pending or approved booking until the day before the reservation date. From the reservation date onward, only the coordinator MAY cancel an eligible booking, subject to the booking lifecycle rules. Cancellation MUST change the status to `Cancelada` and preserve the booking in the database for historical records.
 - **Data Retention**: No purging of past bookings required; all historical data retained in database
 - **Operating Hours**: Defined as fixed times (e.g., 7 AM - 7 PM daily); no complex schedules (e.g., different hours per day of week) for V1
 - **Notifications**: No email confirmations, SMS, or push notifications required (business rules enforcement is local only)
@@ -327,15 +329,15 @@ Both admin and user need to see a dashboard with 2-3 key business indicators:
 
 2. **BR-002 - Future Bookings Only**: The system MUST prevent bookings from being created, updated, or kept active for past dates or times. A booking cannot have a start_time before the current date/time.
 
-3. **BR-003 - Permission-Based Access**: The system MUST ensure that regular users can only create, view, update, and delete their own bookings. Users cannot modify bookings created by other users. Only admins can view/manage all bookings.
+
+3. **BR-003 - Permission-Based Access**: The system MUST allow both regular users (professors) and admins (coordinators) to view all bookings. Regular users MUST only create bookings for themselves and MUST NOT modify bookings belonging to other users. Booking owners MAY update or cancel their own bookings only when permitted by the booking status and cancellation rules. Coordinators MAY manage bookings according to their administrative permissions, including approving, rejecting, and cancelling reservations when allowed.
+
 
 4. **BR-004 - Space Validation**: The system MUST ensure that a Space entity exists before a Booking can reference it. If a space is deleted, its past bookings remain (for audit), but no new bookings can be created for that space.
 
 5. **BR-005 - Operating Hours Compliance**: The system MUST enforce that all bookings start and end within the space's defined operating hours. A booking from 8 AM to 8:30 PM for a space operating 7 AM - 7 PM MUST be rejected.
 
-6. **BR-006 - Booking Limit Per User**: The system MUST NOT impose a fixed daily booking limit per user. The system MUST only enforce space availability and time-slot conflicts. Fairness is managed by the availability constraints, not by a daily cap.
-
-7. **BR-007 - Booking Lifecycle & Historical Retention**: The system MUST use the fixed status set `Pendente`, `Aprovada`, `Recusada`, and `Cancelada`. Transitions are limited to `Pendente -> Aprovada | Recusada` and `Pendente/Aprovada -> Cancelada` when cancellation is allowed by business rules. Only the coordinator may approve or reject pending bookings. The owner may cancel a booking until the day before the reservation date; after that, only the coordinator may cancel it. `Aprovada` reservations that have already passed in time are historical records and do not require an additional `Concluída` status. Cancelled or rejected reservations MUST remain stored for history and must not be physically deleted; if logical deletion is used, it must only apply as a soft-delete mechanism for relevant views or retention rules.
+6. **BR-006 - Booking Lifecycle & Historical Retention**: The system MUST use the fixed status set `Pendente`, `Aprovada`, `Recusada`, and `Cancelada`. Transitions are limited to `Pendente -> Aprovada | Recusada` and `Pendente/Aprovada -> Cancelada` when cancellation is allowed by business rules. Only the coordinator may approve or reject pending bookings. The owner may cancel a booking until the day before the reservation date; after that, only the coordinator may cancel it. `Aprovada` reservations that have already passed in time are historical records and do not require an additional `Concluída` status. Cancelled or rejected reservations MUST remain stored for history and must not be physically deleted; if logical deletion is used, it must only apply as a soft-delete mechanism for relevant views or retention rules.
 
 ---
 
@@ -343,8 +345,8 @@ Both admin and user need to see a dashboard with 2-3 key business indicators:
 
 **These items are reasonable defaults based on context; if your specific theme differs, update before planning:**
 
-- **Maximum daily bookings per user (BR-006)**: Currently unspecified. Reasonable default = 3 per day. Adjust if your business context requires different limits.
-- **Booking cancellation policy**: Currently allowing cancellation anytime. If your theme requires a notice period (e.g., 24 hours), specify it here.
+- **Maximum daily bookings per user **: Resolved on 2026-08-24. No fixed daily booking limit. Bookings must respect space availability and scheduling conflict rules.
+- **Booking cancellation policy**: Resolved on 2026-08-24. The booking owner may cancel until the day before the reservation date. From the reservation date onward, only the coordinator may cancel an eligible booking.
 - **Space operating hours format**: Currently assumed fixed daily hours (e.g., 7 AM - 7 PM). If your spaces have different hours per day, specify here.
 - **Admin vs. User distinction**: Currently assumed admin has full system access and users can only manage their own bookings. Adjust if different roles are needed.
 - **Email notifications**: Explicitly out of scope per constitution. If business context requires confirmations, add to spec and clarify implementation method.
