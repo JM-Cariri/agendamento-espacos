@@ -12,10 +12,16 @@ if (missingEnvVars.length > 0) {
   throw new Error(`Missing required database environment variables: ${missingEnvVars.join(', ')}`);
 }
 
+const isTestRun = process.env.NODE_ENV === 'test'
+  || process.execArgv.includes('--test')
+  || process.argv.some((argument) => argument.includes('/node_modules/.bin/node') || argument.includes('/tests/'));
+
 export const pool = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
-  database: process.env.DB_NAME,
+  database: isTestRun
+    ? (process.env.TEST_DB_NAME || 'agendamento_espacos_test')
+    : process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   ssl: false,

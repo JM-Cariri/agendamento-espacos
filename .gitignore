@@ -1,5 +1,10 @@
 node_modules/
 backend/node_modules/
 backend/.env
+backend/.env.test
 .env
+.env.test
 .DS_Store
+
+frontend/node_modules/
+frontend/dist/

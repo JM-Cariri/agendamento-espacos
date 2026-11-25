@@ -21,22 +21,22 @@ export function requireTrustedOrigin(req, res, next) {
     return next();
   }
 
-  const allowedOrigin = process.env.FRONTEND_ORIGIN;
-  const requestOrigin = req.headers.origin || req.headers.referer;
-
-  if (!allowedOrigin) {
-    return res.status(403).json({ error: 'Origin not configured for write requests.' });
-  }
-
+  const allowedOrigins = new Set([
+    'http://localhost:5173',
+    ...(process.env.TRUSTED_ORIGINS || '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+    ...(process.env.FRONTEND_ORIGIN ? [process.env.FRONTEND_ORIGIN.trim()] : []),
+  ]);
+  const requestOrigin = req.headers.origin;
   if (!requestOrigin) {
     return res.status(403).json({ error: 'Origin is required for state-changing requests.' });
   }
 
   try {
-    const allowedUrl = new URL(allowedOrigin);
     const requestUrl = new URL(requestOrigin);
-
-    if (requestUrl.origin !== allowedUrl.origin) {
+    if (requestUrl.origin !== requestOrigin || !allowedOrigins.has(requestUrl.origin)) {
       return res.status(403).json({ error: 'Origin not trusted.' });
     }
   } catch (_error) {

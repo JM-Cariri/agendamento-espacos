@@ -7,9 +7,12 @@
     "dev": "node --watch src/app.js",
     "start": "node src/app.js",
     "db:migrate": "node scripts/run-migrations.js",
-    "db:seed": "node db/seeds/001_usuarios.js",
-    "test:smoke": "node --test tests/db-smoke.test.js",
-    "test": "NODE_ENV=test node --test tests/db-smoke.test.js tests/auth.test.js"
+    "db:seed": "node db/seeds/001_usuarios.js && node db/seeds/002_espacos.js",
+    "test:smoke": "NODE_ENV=test TEST_DB_NAME=agendamento_espacos_test node --test tests/db-smoke.test.js",
+    "test": "NODE_ENV=test TEST_DB_NAME=agendamento_espacos_test FRONTEND_ORIGIN=http://localhost:5173 npm run db:test:prepare && NODE_ENV=test TEST_DB_NAME=agendamento_espacos_test FRONTEND_ORIGIN=http://localhost:5173 node --test tests/validators.test.js tests/db-smoke.test.js tests/auth.test.js tests/domain.test.js",
+    "db:test:prepare": "NODE_ENV=test TEST_DB_NAME=agendamento_espacos_test FRONTEND_ORIGIN=http://localhost:5173 node scripts/run-migrations.js && NODE_ENV=test TEST_DB_NAME=agendamento_espacos_test FRONTEND_ORIGIN=http://localhost:5173 node db/seeds/001_usuarios.js",
+    "db:seed:spaces": "node db/seeds/002_espacos.js",
+    "test:unit": "NODE_ENV=test TEST_DB_NAME=agendamento_espacos_test node --test tests/validators.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
